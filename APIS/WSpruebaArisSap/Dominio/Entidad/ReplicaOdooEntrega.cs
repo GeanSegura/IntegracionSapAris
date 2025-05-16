@@ -19,7 +19,7 @@ namespace Domain.Entidad
    public class ReplicaOdooEntregaDetalle
     {
         public string POSNR { get; set; }
-        public string KWMENG { get; set; }
+        public decimal KWMENG { get; set; }
         public string VRKME { get; set; }
         public string CHARG { get; set; }
     }
@@ -77,7 +77,7 @@ namespace Domain.Entidad
         public string POSNR { get; set; }
 
         [SapName("KWMENG")]
-        public string KWMENG { get; set; }
+        public decimal KWMENG { get; set; }
 
         [SapName("VRKME")]
         public string VRKME { get; set; }
