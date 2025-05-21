@@ -6,6 +6,7 @@
 *.sln.docstates
 
 ## Carpeta de compilación
+
 bin/
 obj/
 Debug/
@@ -32,3 +33,4 @@ project.fragment.lock.json
 
 ## Otros
 *.vscode/
+
