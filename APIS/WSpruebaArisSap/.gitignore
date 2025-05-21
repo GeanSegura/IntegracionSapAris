@@ -1,0 +1,34 @@
+## Archivos y carpetas temporales de VS
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Carpeta de compilación
+bin/
+obj/
+Debug/
+Release/
+
+## Archivos de cache o temporales
+*.log
+*.tmp
+*.cache
+*.dbmdl
+*.pidb
+
+## Archivos de configuración local
+*.vspscc
+*.vssscc
+*.ncb
+*.sdf
+
+## Archivos de paquetes NuGet descargados
+packages/
+*.nupkg
+project.lock.json
+project.fragment.lock.json
+
+## Otros
+*.vscode/
