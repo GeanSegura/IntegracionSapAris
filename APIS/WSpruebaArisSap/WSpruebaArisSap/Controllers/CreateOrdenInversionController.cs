@@ -11,6 +11,10 @@ using System.Threading.Tasks;
 using Dbosoft.YaNco.TypeMapping;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Runtime.InteropServices;
+using Application.Interfaces;
+using Domain.Entidad;
+using SapNwRfc;
+using static Domain.Entidad.CreateOrdenInversion;
 
 
 
@@ -18,76 +22,60 @@ namespace WSpruebaArisSap.Controllers
 {
     [ApiController]
     [Route("api/")]
-    public class CreateOrdenInversionController : ControllerBase
+    public sealed class CreateOrdenInversionController (
+        ILibraryInitializer libraryInitializer,
+        IInitializerContextSAP initializerContextSAP
+        ) : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-
-        public CreateOrdenInversionController(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
 
         [HttpGet("CreateOrdenInversionController")]
-        public async Task<IActionResult> GetCreateOrdenInversion(string CO_AREA, string COMP_CODE, string ORDER_TYPE,string ORDER, string FUNC_AREA_LONG, string PROFIT_CTR,string REQU_COMP_CODE, string INVEST_PROFILE,string CURRENCY,string OBJECTCLASS="")
+        public async Task<IActionResult> GetCreateOrdenInversion(string CO_AREA, string COMP_CODE, string ORDER_TYPE,string ORDER, string FUNC_AREA_LONG, string PROFIT_CTR,string REQU_COMP_CODE, string INVEST_PROFILE,string CURRENCY,string OBJECTCLASS)
         {
-            string basePath = Path.Combine(AppContext.BaseDirectory, "Recursos");
-            NativeLibrary.Load(Path.Combine(basePath, "icuuc50.dll"));
-            NativeLibrary.Load(Path.Combine(basePath, "icudt50.dll"));
-            NativeLibrary.Load(Path.Combine(basePath, "icuin50.dll"));
-            var settings = new Dictionary<string, string>
+            try
             {
-                {"ashost", "10.45.4.163"},
-                {"sysnr", "01"},
-                {"client", "200"},
-                {"user", "USU_INTEGRAC"},
-                {"passwd","Rocio*25"},
-                {"lang", "ES"}
-            };
+                bool resLibraryInitializer = libraryInitializer.InitializeLibrary();
 
-            var connectionBuilder = new ConnectionBuilder(settings);
-            var connFunc = connectionBuilder.Build();
-
-            using (var context = new RfcContext(connFunc))
-            {
-                try
+                if (!resLibraryInitializer)
                 {
-                    OBJECTCLASS = string.IsNullOrEmpty(OBJECTCLASS) ? "" : OBJECTCLASS;
-                    var result = await context.CallFunction("ZCO_FM_CREATE_ORDEN_INV",
-                        Input: f => f.SetStructure("IS_DAT_ORDEN", s => s
-                                        .SetField("CO_AREA", CO_AREA)
-                                        .SetField("COMP_CODE", COMP_CODE)
-                                        .SetField("ORDER_TYPE", ORDER_TYPE)
-                                        .SetField("ORDER",ORDER)
-                                        .SetField("FUNC_AREA_LONG", FUNC_AREA_LONG)
-                                        .SetField("OBJECTCLASS", OBJECTCLASS)
-                                        .SetField("PROFIT_CTR", PROFIT_CTR)
-                                        .SetField("REQU_COMP_CODE", REQU_COMP_CODE)
-                                        .SetField("INVEST_PROFILE", INVEST_PROFILE)
-                                        .SetField("CURRENCY", CURRENCY)),
-                        Output: f => f
-                            .MapTable("T_RETURN", s =>
-                                 from TYPE in s.GetField<string>("TYPE")    // CHAR
-                                 from ID in s.GetField<string>("ID")    // CHAR
-                                 from NUMBER in s.GetField<string>("NUMBER")    // CHAR
-                                 from MESSAGE in s.GetField<string>("MESSAGE")
-                                 select new
-                                 {
-                                     TYPE,
-                                     ID,
-                                     NUMBER,
-                                     MESSAGE
-                                 }));
+                    throw new Exception("No se pudo cargar librerías necesarias");
+                }
 
-                    return Ok(new
+                string connectionString = initializerContextSAP.InitializeContextConnSap();
+                OBJECTCLASS = string.IsNullOrWhiteSpace(OBJECTCLASS) ? "" : OBJECTCLASS;
+
+                using var connection = new SapConnection(connectionString);
+                connection.Connect();
+
+                using var someFunction = connection.CreateFunction("ZCO_FM_CREATE_ORDEN_INV");
+
+                var result = someFunction.Invoke<CreateOrdenInversionResult>(new CreateOrdenInversionParameters
+                {
+                    DAT = new CreateOrdenInversionResultItemDAT
                     {
-                        Data = result.Case
-                    });
-                }
-                catch (Exception ex)
+                        CO_AREA = CO_AREA,
+                        COMP_CODE = COMP_CODE,
+                        ORDER_TYPE =  ORDER_TYPE,
+                        ORDER = ORDER ,
+                        FUNC_AREA_LONG = FUNC_AREA_LONG,
+                        OBJECTCLASS = OBJECTCLASS == "INVER" ? "IV" : OBJECTCLASS,
+                        PROFIT_CTR = PROFIT_CTR,
+                        REQU_COMP_CODE = REQU_COMP_CODE,
+                        INVEST_PROFILE = INVEST_PROFILE,
+                        CURRENCY = CURRENCY
+
+                    },
+                });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
                 {
-                    return BadRequest(new { Error = ex.Message });
-                }
+                    Error = $"Error {ex.Message}"
+                });
             }
         }
     }
 }
+
